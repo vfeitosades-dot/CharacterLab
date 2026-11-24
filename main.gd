@@ -11,6 +11,9 @@ var pitch := -0.16
 var current := ""
 var hud: Label
 var zoom := 4.5
+var was_grounded := false
+var land_time := 0.0
+var jump_was_down := false
 
 func _ready() -> void:
 	var world := WorldEnvironment.new()
@@ -139,13 +142,16 @@ func _physics_process(delta: float) -> void:
 	input = input.limit_length()
 	var direction := Vector3(input.x, 0, input.y).rotated(Vector3.UP, yaw)
 	var sprint := Input.is_physical_key_pressed(KEY_SHIFT)
+	var jump_down := Input.is_physical_key_pressed(KEY_SPACE) and Input.mouse_mode == Input.MOUSE_MODE_CAPTURED
+	var jump_pressed := jump_down and not jump_was_down
+	jump_was_down = jump_down
 	var speed := 4.4 if sprint else 1.8
 	var target := direction * speed
 	var accel := 14.0 if direction.length() > 0.01 else 19.0
 	player.velocity.x = move_toward(player.velocity.x, target.x, accel * delta)
 	player.velocity.z = move_toward(player.velocity.z, target.z, accel * delta)
 	if player.is_on_floor():
-		if Input.is_physical_key_pressed(KEY_SPACE) and Input.mouse_mode == Input.MOUSE_MODE_CAPTURED:
+		if jump_pressed:
 			player.velocity.y = 4.4
 		else:
 			player.velocity.y = -0.1
@@ -155,8 +161,16 @@ func _physics_process(delta: float) -> void:
 	if direction.length() > 0.02:
 		visual.rotation.y = lerp_angle(visual.rotation.y, atan2(-direction.x, -direction.z), 1.0 - exp(-12.0 * delta))
 	var planar := Vector2(player.velocity.x, player.velocity.z).length()
-	if not player.is_on_floor():
+	var grounded := player.is_on_floor()
+	if grounded and not was_grounded:
+		land_time = 0.22
+	was_grounded = grounded
+	land_time = maxf(0.0, land_time - delta)
+	if not grounded:
+		land_time = 0.0
 		set_anim("Jump" if player.velocity.y > 0.0 else "Fall", 1.0)
+	elif land_time > 0.0:
+		set_anim("Land", 1.0)
 	elif planar < 0.15:
 		set_anim("Idle", 1.0)
 	elif planar > 2.45:
