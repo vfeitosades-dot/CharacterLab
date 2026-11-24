@@ -4,6 +4,7 @@ on:
   push:
     branches: [main, master]
     paths:
+      - 'CharacterLab_Godot.zip'
       - 'assets/character.glb'
       - 'main.gd'
       - 'project.godot'
@@ -15,29 +16,40 @@ jobs:
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
-      - name: Check model
-        run: test -s assets/character.glb
+      - name: Prepare project
+        run: |
+          if [ -f CharacterLab_Godot.zip ]; then
+            unzip -q CharacterLab_Godot.zip -d "$RUNNER_TEMP/characterlab"
+            project="$RUNNER_TEMP/characterlab/CharacterLab_Godot"
+          else
+            project="$GITHUB_WORKSPACE"
+          fi
+          test -s "$project/assets/character.glb" || { echo "::error::Upload CharacterLab_Godot.zip to the repository root."; exit 1; }
+          test -s "$project/project.godot"
+          echo "PROJECT_DIR=$project" >> "$GITHUB_ENV"
       - name: Install Godot and templates
         run: |
-          wget -q https://github.com/godotengine/godot-builds/releases/download/4.4.1-stable/Godot_v4.4.1-stable_linux.x86_64.zip
-          wget -q https://github.com/godotengine/godot-builds/releases/download/4.4.1-stable/Godot_v4.4.1-stable_export_templates.tpz
-          unzip -q Godot_v4.4.1-stable_linux.x86_64.zip
-          mv Godot_v4.4.1-stable_linux.x86_64 /tmp/godot
-          chmod +x /tmp/godot
-          unzip -q Godot_v4.4.1-stable_export_templates.tpz -d /tmp/godot_templates
+          cd "$RUNNER_TEMP"
+          curl -fL --retry 3 -o godot.zip https://github.com/godotengine/godot-builds/releases/download/4.4.1-stable/Godot_v4.4.1-stable_linux.x86_64.zip
+          curl -fL --retry 3 -o templates.tpz https://github.com/godotengine/godot-builds/releases/download/4.4.1-stable/Godot_v4.4.1-stable_export_templates.tpz
+          unzip -q godot.zip
+          mv Godot_v4.4.1-stable_linux.x86_64 godot
+          chmod +x godot
+          unzip -q templates.tpz -d godot_templates
           mkdir -p ~/.local/share/godot/export_templates
-          mv /tmp/godot_templates/templates ~/.local/share/godot/export_templates/4.4.1.stable
-          rm Godot_v4.4.1-stable_linux.x86_64.zip Godot_v4.4.1-stable_export_templates.tpz
+          mv godot_templates/templates ~/.local/share/godot/export_templates/4.4.1.stable
       - name: Import and export
         run: |
-          mkdir -p build
-          /tmp/godot --headless --editor --path . --import
-          /tmp/godot --headless --path . --export-release 'Windows Desktop' build/CharacterLab.exe
-          test -s build/CharacterLab.exe
+          mkdir -p "$GITHUB_WORKSPACE/build"
+          "$RUNNER_TEMP/godot" --headless --editor --path "$PROJECT_DIR" --import
+          "$RUNNER_TEMP/godot" --headless --path "$PROJECT_DIR" --export-release "Windows Desktop" "$GITHUB_WORKSPACE/build/CharacterLab.exe"
+          test -s "$GITHUB_WORKSPACE/build/CharacterLab.exe"
+          file "$GITHUB_WORKSPACE/build/CharacterLab.exe" | grep -E 'PE32'
       - uses: actions/upload-artifact@v4
         with:
           name: CharacterLab-Windows
           path: build/CharacterLab.exe
+          if-no-files-found: error
       - name: Publish direct download
         env:
           GH_TOKEN: ${{ github.token }}
