@@ -1,0 +1,80 @@
+name: Y Bot V6 - Natural Movement Windows
+on:
+  push:
+    branches: [ybot-baseplate]
+    paths: ['v6/**','.github/workflows/ybot-cinematic-v6.yml']
+  workflow_dispatch:
+concurrency:
+  group: ybot-cinematic-v6
+  cancel-in-progress: false
+permissions:
+  contents: write
+jobs:
+  windows:
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          ref: ybot-baseplate
+      - name: Restore only original FBX animations
+        run: |
+          mkdir -p project build
+          unzip -q YBot-Motifect-V3.zip -d project
+          rm -rf project/assets/motion project/motifect.gd project/MOTIFECT_LICENSE.txt project/.github
+          cp v5/natural.gd project/movement.gd
+          cp v6/cinematic.gd project/natural.gd
+          mkdir -p project/visual
+          cp v6/*.gdshader project/visual/
+          sed -i 's#res://motifect.gd#res://natural.gd#' project/main.tscn
+          sed -i 's#include_filter=.*#include_filter=""#' project/export_presets.cfg
+          cd project/assets
+          sha256sum -c <<'HASHES'
+          5c6d9a3adb3c9b1772532cfbe48d4e72db7db3be9f6d5ffa475a8a10798c415e  jump.fbx
+          945e76b0e32f889fcd546dcfb730e25095c0b704c986ed7db54f748c54b524a8  run_jump.fbx
+          cb5843e0dbee6c17885d2aff77dcc1c52c9715d6657cf185b155cc4241996f1b  run.fbx
+          bdd6482bbec1917b2a9693d2a5d3ac18b9b70a4450f63169f6320e2b96932a6b  walk.fbx
+          HASHES
+          test -s idle.fbx
+          test -s ybot.fbx
+          cd ..
+          printf '%s\n' '# Y Bot V6 - Natural Movement' 'Original Mixamo idle, walk, run, jump and running jump. WASD, Shift, Space, mouse. Fixed sunlight, moving procedural clouds, textured concrete, F6 graphics presets, V5 foot contact and jump physics.' > README.md
+          zip -qr ../build/YBot-Cinematic-V6.zip . -x '.godot/*'
+      - name: Install Godot
+        run: |
+          cd "$RUNNER_TEMP"
+          curl -fL --retry 3 -o godot.zip https://github.com/godotengine/godot-builds/releases/download/4.4.1-stable/Godot_v4.4.1-stable_linux.x86_64.zip
+          curl -fL --retry 3 -o templates.tpz https://github.com/godotengine/godot-builds/releases/download/4.4.1-stable/Godot_v4.4.1-stable_export_templates.tpz
+          unzip -q godot.zip
+          mv Godot_v4.4.1-stable_linux.x86_64 godot
+          chmod +x godot
+          unzip -q templates.tpz -d godot_templates
+          mkdir -p ~/.local/share/godot/export_templates
+          mv godot_templates/templates ~/.local/share/godot/export_templates/4.4.1.stable
+      - name: Import and smoke test
+        run: |
+          "$RUNNER_TEMP/godot" --headless --editor --path "$GITHUB_WORKSPACE/project" --import
+          timeout 60 "$RUNNER_TEMP/godot" --headless --path "$GITHUB_WORKSPACE/project" -- --smoke-test
+      - name: Export Windows
+        run: |
+          "$RUNNER_TEMP/godot" --headless --path "$GITHUB_WORKSPACE/project" --export-release "Windows Desktop" "$GITHUB_WORKSPACE/build/YBot-Cinematic-V6.exe"
+          test -s build/YBot-Cinematic-V6.exe
+          file build/YBot-Cinematic-V6.exe | grep PE32
+      - uses: actions/upload-artifact@v4
+        with:
+          name: YBot-Cinematic-V6
+          path: build/*
+          if-no-files-found: error
+      - name: Publish ZIP and EXE
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          if ! gh release view ybot-cinematic-v6 >/dev/null 2>&1; then
+            gh release create ybot-cinematic-v6 --target "$(git rev-parse HEAD)" --title 'Y Bot V6 - Natural Movement' --notes 'Fixed sunlight, moving procedural clouds, concrete material, three quality presets, original animations and V5 movement.'
+          fi
+          for attempt in 1 2 3; do
+            if gh release upload ybot-cinematic-v6 build/YBot-Cinematic-V6.exe build/YBot-Cinematic-V6.zip --clobber; then exit 0; fi
+            sleep 5
+          done
+          echo "::warning::Release upload failed; use the verified Actions artifact."
+          exit 0
