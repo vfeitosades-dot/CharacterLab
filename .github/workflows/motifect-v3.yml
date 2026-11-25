@@ -2,7 +2,7 @@ name: Motifect V3 - ZIP and Windows
 on:
   push:
     branches: [ybot-baseplate]
-    paths: ['Motifect_locomotion_complete_v1_0.zip','YBot-Motifect-V3*.zip']
+    paths: ['Motifect_locomotion_complete_v1_0.zip','YBot-Motifect-V3*.zip','.github/workflows/motifect-v3.yml']
   workflow_dispatch:
 permissions:
   contents: write
@@ -42,6 +42,7 @@ jobs:
           fi
           test -f project/project.godot
           test "$(find project/assets/motion -name '*.bvh' | wc -l)" -eq 45
+          find project -name "*.gd" -type f -exec sed -i "s/Array\[PackedFloat32Array\]/Array[PackedFloat64Array]/g" {} +
           (cd project && zip -qr ../build/YBot-Motifect-V3.zip . -x '.git/*' '.godot/*' '.github/*')
           unzip -tq build/YBot-Motifect-V3.zip
       - name: Publish project ZIP
