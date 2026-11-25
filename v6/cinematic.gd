@@ -40,7 +40,7 @@ func make_world() -> void:
 	cinematic_environment.ambient_light_source = Environment.AMBIENT_SOURCE_COLOR
 	cinematic_environment.ambient_light_color = Color(0.68,0.80,1.0)
 	cinematic_environment.ambient_light_energy = 0.66
-	cinematic_environment.reflected_light_source = Environment.REFLECTED_SOURCE_SKY
+	cinematic_environment.reflected_light_source = Environment.REFLECTION_SOURCE_SKY
 	cinematic_environment.tonemap_mode = Environment.TONE_MAPPER_FILMIC
 	cinematic_environment.tonemap_exposure = 1.05
 	cinematic_environment.tonemap_white = 4.0
