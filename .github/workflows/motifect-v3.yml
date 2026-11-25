@@ -1,0 +1,76 @@
+name: Motifect V3 - ZIP and Windows
+on:
+  push:
+    branches: [ybot-baseplate]
+    paths: ['Motifect_locomotion_complete_v1_0.zip','YBot-Motifect-V3.zip']
+  workflow_dispatch:
+permissions:
+  contents: write
+jobs:
+  package:
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    steps:
+      - uses: actions/checkout@v4
+      - name: Assemble Godot project
+        run: |
+          mkdir -p project build
+          if [ -f YBot-Motifect-V3.zip ]; then
+            unzip -q YBot-Motifect-V3.zip -d project
+          else
+            test -s Motifect_locomotion_complete_v1_0.zip || { echo "::error::Upload the original Motifect pack to ybot-baseplate"; exit 1; }
+            unzip -q YBot-Godot.zip -d project
+            python v2/rebuild_idle.py project || true
+            cp v3/motifect.gd project/motifect.gd
+            sed -i 's#res://main.gd#res://motifect.gd#' project/main.tscn
+            sed -i 's#include_filter=""#include_filter="assets/motion/*"#' project/export_presets.cfg
+            python - <<'PY'
+          import pathlib,zipfile
+          p=pathlib.Path("project")
+          out=p/"assets/motion"
+          out.mkdir(parents=True,exist_ok=True)
+          with zipfile.ZipFile("Motifect_locomotion_complete_v1_0.zip") as z:
+              names=sorted(n for n in z.namelist() if n.startswith("BVH/") and n.endswith(".bvh"))
+              assert len(names)==45,len(names)
+              for n in names: (out/pathlib.Path(n).name).write_bytes(z.read(n))
+              (out/"index.txt").write_text("\n".join(pathlib.Path(n).stem for n in names))
+              (p/"MOTIFECT_LICENSE.txt").write_bytes(z.read("README.txt"))
+          (p/"README.md").write_text("# Y Bot Motifect V3\nGodot 4.4.1. WASD, Shift, Space, C crouch, X crawl, Alt tiptoe, Q roll, F1 animation selector. 45 BVH clips. Climbing and obstacle animations are previews on the empty baseplate.\n")
+          PY
+          fi
+          test -f project/project.godot
+          test "$(find project/assets/motion -name '*.bvh' | wc -l)" -eq 45
+          (cd project && zip -qr ../build/YBot-Motifect-V3.zip . -x '.git/*' '.godot/*' '.github/*')
+          unzip -tq build/YBot-Motifect-V3.zip
+      - name: Publish project ZIP
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          if gh release view ybot-motifect-v3 >/dev/null 2>&1; then
+            gh release upload ybot-motifect-v3 build/YBot-Motifect-V3.zip --clobber
+          else
+            gh release create ybot-motifect-v3 build/YBot-Motifect-V3.zip --target "$GITHUB_SHA" --title 'Y Bot Motifect V3' --notes 'Godot project with 45 clips. EXE uploaded after the runtime smoke test.'
+          fi
+      - name: Install Godot
+        run: |
+          cd "$RUNNER_TEMP"
+          curl -fL --retry 3 -o godot.zip https://github.com/godotengine/godot-builds/releases/download/4.4.1-stable/Godot_v4.4.1-stable_linux.x86_64.zip
+          curl -fL --retry 3 -o templates.tpz https://github.com/godotengine/godot-builds/releases/download/4.4.1-stable/Godot_v4.4.1-stable_export_templates.tpz
+          unzip -q godot.zip
+          mv Godot_v4.4.1-stable_linux.x86_64 godot
+          chmod +x godot
+          unzip -q templates.tpz -d godot_templates
+          mkdir -p ~/.local/share/godot/export_templates
+          mv godot_templates/templates ~/.local/share/godot/export_templates/4.4.1.stable
+      - name: Import and test
+        run: |
+          "$RUNNER_TEMP/godot" --headless --editor --path "$GITHUB_WORKSPACE/project" --import
+          timeout 120 "$RUNNER_TEMP/godot" --headless --path "$GITHUB_WORKSPACE/project" -- --smoke-test
+      - name: Export and publish EXE
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          "$RUNNER_TEMP/godot" --headless --path "$GITHUB_WORKSPACE/project" --export-release "Windows Desktop" "$GITHUB_WORKSPACE/build/YBot-Motifect-V3.exe"
+          test -s build/YBot-Motifect-V3.exe
+          file build/YBot-Motifect-V3.exe | grep PE32
+          gh release upload ybot-motifect-v3 build/YBot-Motifect-V3.exe --clobber
