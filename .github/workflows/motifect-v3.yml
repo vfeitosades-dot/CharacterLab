@@ -2,7 +2,7 @@ name: Motifect V3 - ZIP and Windows
 on:
   push:
     branches: [ybot-baseplate]
-    paths: ['Motifect_locomotion_complete_v1_0.zip','YBot-Motifect-V3.zip']
+    paths: ['Motifect_locomotion_complete_v1_0.zip','YBot-Motifect-V3*.zip']
   workflow_dispatch:
 permissions:
   contents: write
@@ -15,7 +15,9 @@ jobs:
       - name: Assemble Godot project
         run: |
           mkdir -p project build
-          if [ -f YBot-Motifect-V3.zip ]; then
+          if [ -f "YBot-Motifect-V3(1).zip" ]; then
+            unzip -q "YBot-Motifect-V3(1).zip" -d project
+          elif [ -f YBot-Motifect-V3.zip ]; then
             unzip -q YBot-Motifect-V3.zip -d project
           else
             test -s Motifect_locomotion_complete_v1_0.zip || { echo "::error::Upload the original Motifect pack to ybot-baseplate"; exit 1; }
