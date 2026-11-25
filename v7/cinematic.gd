@@ -200,13 +200,21 @@ func build_settings_menu() -> void:
 	for preset in ["Leve","Equilibrado","Alto"]: quality_option.add_item(preset)
 	column.add_child(quality_option)
 	quality_option.select(graphics_quality)
-	quality_option.item_selected.connect(func(index: int): graphics_quality=index; apply_graphics_quality(); save_settings())
+	quality_option.item_selected.connect(func(index: int):
+		graphics_quality=index
+		apply_graphics_quality()
+		save_settings()
+	)
 	menu_label("LIMITE DE FPS",column)
 	fps_option = OptionButton.new()
 	for cap in [30,45,60,120,0]: fps_option.add_item("Sem limite" if cap==0 else str(cap)+" FPS",cap)
 	column.add_child(fps_option)
 	fps_option.select(maxi(0,fps_option.get_item_index(fps_cap)))
-	fps_option.item_selected.connect(func(index: int): fps_cap=fps_option.get_item_id(index); Engine.max_fps=fps_cap; save_settings())
+	fps_option.item_selected.connect(func(index: int):
+		fps_cap=fps_option.get_item_id(index)
+		Engine.max_fps=fps_cap
+		save_settings()
+	)
 	var sens_label := menu_label("SENSIBILIDADE DO MOUSE  "+str(snappedf(sensitivity,0.05)),column)
 	var sens := HSlider.new()
 	sens.min_value=0.25
@@ -214,7 +222,11 @@ func build_settings_menu() -> void:
 	sens.step=0.05
 	sens.value=sensitivity
 	column.add_child(sens)
-	sens.value_changed.connect(func(value: float): sensitivity=value; sens_label.text="SENSIBILIDADE DO MOUSE  "+str(value); save_settings())
+	sens.value_changed.connect(func(value: float):
+		sensitivity=value
+		sens_label.text="SENSIBILIDADE DO MOUSE  "+str(value)
+		save_settings()
+	)
 	var fov_label := menu_label("CAMPO DE VISAO  "+str(int(camera_fov)),column)
 	var fov_slider := HSlider.new()
 	fov_slider.min_value=55
@@ -222,16 +234,27 @@ func build_settings_menu() -> void:
 	fov_slider.step=1
 	fov_slider.value=camera_fov
 	column.add_child(fov_slider)
-	fov_slider.value_changed.connect(func(value: float): camera_fov=value; camera.fov=value; fov_label.text="CAMPO DE VISAO  "+str(int(value)); save_settings())
+	fov_slider.value_changed.connect(func(value: float):
+		camera_fov=value
+		camera.fov=value
+		fov_label.text="CAMPO DE VISAO  "+str(int(value))
+		save_settings()
+	)
 	var fps_check := CheckButton.new()
 	fps_check.text="Mostrar contador de FPS"
 	fps_check.button_pressed=fps_display
 	column.add_child(fps_check)
-	fps_check.toggled.connect(func(value: bool): fps_display=value; save_settings())
+	fps_check.toggled.connect(func(value: bool):
+		fps_display=value
+		save_settings()
+	)
 	var resume := menu_button("Continuar jogo",column)
 	resume.pressed.connect(func(): toggle_menu(false))
 	var quit := menu_button("Sair do jogo",column)
-	quit.pressed.connect(func(): save_settings(); get_tree().quit())
+	quit.pressed.connect(func():
+		save_settings()
+		get_tree().quit()
+	)
 	pause_panel.hide()
 
 func toggle_menu(open: bool) -> void:
