@@ -1,4 +1,4 @@
-name: Y Bot Windows
+name: Y Bot V2 Windows
 on:
   push:
     branches: [ybot-baseplate]
@@ -16,6 +16,7 @@ jobs:
         run: |
           test -s YBot-Godot.zip
           unzip -q YBot-Godot.zip -d "$RUNNER_TEMP/ybot"
+          test -s "$RUNNER_TEMP/ybot/assets/idle.fbx"
       - name: Install Godot 4.4.1
         run: |
           cd "$RUNNER_TEMP"
@@ -46,8 +47,8 @@ jobs:
         env:
           GH_TOKEN: ${{ github.token }}
         run: |
-          if gh release view ybot-windows >/dev/null 2>&1; then
-            gh release upload ybot-windows build/YBot.exe --clobber
+          if gh release view ybot-v2-windows >/dev/null 2>&1; then
+            gh release upload ybot-v2-windows build/YBot.exe --clobber
           else
-            gh release create ybot-windows build/YBot.exe --target "$GITHUB_SHA" --title 'Y Bot - Baseplate (Windows)' --notes 'Windows x64. Executable with embedded game data.'
+            gh release create ybot-v2-windows build/YBot.exe --target "$GITHUB_SHA" --title 'Y Bot V2 - Baseplate (Windows)' --notes 'Windows x64. Standard Idle, smoother acceleration, animation blending and jump physics.'
           fi
