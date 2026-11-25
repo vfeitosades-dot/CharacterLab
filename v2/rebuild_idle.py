@@ -47,7 +47,7 @@ nodes,footer=parse(27,len(b))
 def val(node,i):return node[1][i][0]
 def child(node,name):return next(x for x in node[2] if x[0]==name)
 def arr(node,kind,values):
-    raw=struct.pack('<'+str(len(values))+kind,*values)
+    raw=struct.pack('<'+str(len(values))+('q' if kind=='l' else kind),*values)
     node[1]=[[None,kind.encode()+struct.pack('<III',len(values),0,len(raw))+raw]]
 def scalar(node,i,kind,v):
     node[1][i]=[v,kind.encode()+struct.pack('<'+fmt[kind],v)]
