@@ -102,8 +102,8 @@ func setup_motion_tree() -> void:
 
 func update_weights(speed: float, dt: float) -> void:
 	var blend_speed := 1.0-exp(-12.0*dt)
-	var w := smoothstep(0.04,V4_WALK,speed)
-	var r := smoothstep(V4_WALK,3.9,speed)
+	var w: float = smoothstep(0.04,V4_WALK,speed)
+	var r: float = smoothstep(V4_WALK,3.9,speed)
 	walk_weight = lerpf(walk_weight,w,blend_speed)
 	run_weight = lerpf(run_weight,r,blend_speed)
 	walk_rate = lerpf(walk_rate,clampf(speed/V4_WALK,0.42,1.38),1.0-exp(-9.0*dt))
@@ -161,7 +161,7 @@ func _physics_process(dt: float) -> void:
 		target = planar.lerp(stick*minf(takeoff_speed,target_speed),0.20) if moving else planar
 		accel_limit = 1.1
 	elif jump_phase == 3:
-		var recovery := smoothstep(0.0,0.22,recovery_elapsed)
+		var recovery: float = smoothstep(0.0,0.22,recovery_elapsed)
 		target *= lerpf(0.38,1.0,recovery)
 		accel_limit = 5.0
 	var desired_accel := (target-planar)/maxf(dt,0.001)
@@ -187,7 +187,7 @@ func _physics_process(dt: float) -> void:
 		if not grounded: max_turn = 2.8
 		var goal_rate := clampf(error*8.0,-max_turn,max_turn)
 		visual_turn_rate = move_toward(visual_turn_rate,goal_rate,26.0*dt)
-		pivot.rotation.y += clampf(visual_turn_rate*dt,-absf(error),absf(error))
+		pivot.rotation.y += clampf(visual_turn_rate*dt,minf(0.0,error),maxf(0.0,error))
 	else:
 		visual_turn_rate = move_toward(visual_turn_rate,0.0,26.0*dt)
 	var launched := false
