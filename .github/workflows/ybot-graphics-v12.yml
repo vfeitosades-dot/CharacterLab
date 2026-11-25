@@ -79,39 +79,15 @@ jobs:
           file build/YBot-Graphics-V12.exe | grep PE32
           mv build/YBot-Graphics-V12.exe build/YBot-Graphics-V12-Leve.exe
           python - <<'PY'
-          import re
           from pathlib import Path
           p=Path("project/project.godot")
           s=p.read_text()
-          s=re.sub(r'(?m)^renderer/rendering_method="[^"]*"
-      - uses: actions/upload-artifact@v4
-        with:
-          name: YBot-Graphics-V12
-          path: build/*
-          if-no-files-found: error
-      - name: Publish ZIP and EXE
-        env:
-          GH_TOKEN: ${{ github.token }}
-        run: |
-          if ! gh release view ybot-graphics-v12 >/dev/null 2>&1; then
-            gh release create ybot-graphics-v12 --target "$(git rev-parse HEAD)" --title 'Y Bot V12 - Natural Movement' --notes 'Compatibility and Forward+ executables. Ultra includes optional SDFGI, SSAO, SSIL, SSR, TAA and soft sunlight. No hardware ray tracing.'
-          fi
-          for attempt in 1 2 3; do
-            if gh release upload ybot-graphics-v12 build/YBot-Graphics-V12-Leve.exe build/YBot-Graphics-V12-Ultra.exe build/YBot-Graphics-V12.zip --clobber; then exit 0; fi
-            sleep 5
-          done
-          echo "::warning::Release upload failed; use the verified Actions artifact."
-          exit 0
-,'renderer/rendering_method="forward_plus"',s)
-          s=s.replace('"GL Compatibility"','"Forward Plus"')
-          if 'renderer/rendering_method="forward_plus"' not in s:
-              if "[rendering]" in s:
-                  s=s.replace("[rendering]",'[rendering]\nrenderer/rendering_method="forward_plus"',1)
-              else:
-                  s+='\n[rendering]\nrenderer/rendering_method="forward_plus"\n'
-          if "lights_and_shadows/directional_shadow/size=" not in s:
-              s=s.replace("[rendering]","[rendering]\nlights_and_shadows/directional_shadow/size=8192",1)
-          p.write_text(s)
+          lines=[line for line in s.splitlines() if not line.startswith(("renderer/rendering_method=", "renderer/rendering_method.mobile=", "lights_and_shadows/directional_shadow/size="))]
+          s="\n".join(lines).replace('"GL Compatibility"','"Forward Plus"')
+          if "[rendering]" not in s:
+              s+="\n[rendering]\n"
+          s=s.replace("[rendering]",'[rendering]\nrenderer/rendering_method="forward_plus"\nlights_and_shadows/directional_shadow/size=8192',1)
+          p.write_text(s+"\n")
           PY
           "$RUNNER_TEMP/godot" --headless --editor --path "$GITHUB_WORKSPACE/project" --import
           "$RUNNER_TEMP/godot" --headless --path "$GITHUB_WORKSPACE/project" --export-release "Windows Desktop" "$GITHUB_WORKSPACE/build/YBot-Graphics-V12-Ultra.exe"
@@ -127,10 +103,10 @@ jobs:
           GH_TOKEN: ${{ github.token }}
         run: |
           if ! gh release view ybot-graphics-v12 >/dev/null 2>&1; then
-            gh release create ybot-graphics-v12 --target "$(git rev-parse HEAD)" --title 'Y Bot V12 - Natural Movement' --notes 'Improved water: screen-space reflections, Snell refraction approximation, cellular caustics, four interactive ripples, retained V9 motion.'
+            gh release create ybot-graphics-v12 --target "$(git rev-parse HEAD)" --title 'Y Bot V12 - Natural Movement' --notes 'Compatibility and Forward+ executables. Ultra includes optional SDFGI, SSAO, SSIL, SSR, TAA and soft sunlight. No hardware ray tracing.'
           fi
           for attempt in 1 2 3; do
-            if gh release upload ybot-graphics-v12 build/YBot-Graphics-V12.exe build/YBot-Graphics-V12.zip --clobber; then exit 0; fi
+            if gh release upload ybot-graphics-v12 build/YBot-Graphics-V12-Leve.exe build/YBot-Graphics-V12-Ultra.exe build/YBot-Graphics-V12.zip --clobber; then exit 0; fi
             sleep 5
           done
           echo "::warning::Release upload failed; use the verified Actions artifact."
